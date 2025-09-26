@@ -145,6 +145,15 @@ async def update_user(user_data: UpdateUserDto, db: Session = Depends(get_db), c
         raise HTTPException(status_code=500, detail=f"Error al actualizar usuario: {str(e)}")
     return user
 
+@router.get("/unenrolled-students/{subject_id}", response_model=list[UserDto])
+def list_unenrolled_students(subject_id: int, db: Session = Depends(get_db), curr_user: User = Depends(get_current_user)):
+    if curr_user.role != UserRole.ADMIN and curr_user.role != UserRole.TEACHER:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver los estudiantes no inscritos")
+    
+    subquery = db.query(User.id).join(User.enrollments).filter_by(subject_id=subject_id).subquery()
+    unenrolled_students = db.query(User).filter(User.role == UserRole.STUDENT, ~User.id.in_(subquery)).all()
+    return unenrolled_students
+
 @router.put("/{user_id}", response_model=UserDto)
 async def update_user(user_id: int, user_data: UpdateUserDto, db: Session = Depends(get_db), curr_user: User = Depends(get_current_user)):
     user = db.query(User).filter(User.id == user_id).first()
