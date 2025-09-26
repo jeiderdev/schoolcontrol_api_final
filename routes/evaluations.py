@@ -38,6 +38,8 @@ def create_evaluation(
 
     evaluation = Evaluation(
         name=evaluation_data.name,
+        description=evaluation_data.description,
+        percentage=evaluation_data.percentage,
         subject_id=evaluation_data.subject_id,
     )
     try:
@@ -50,6 +52,26 @@ def create_evaluation(
 
     return evaluation
 
+@router.get("/subject/{subject_id}", response_model=List[EvaluationDto])
+def list_evaluations_by_subject(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    curr_user: User = Depends(get_current_user)
+):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Materia no encontrada")
+
+    # Permisos: solo admin, profesor dueño de la materia o estudiantes matriculados
+    if curr_user.role != UserRole.ADMIN and curr_user.id != subject.teacher_id:
+        enrollment = db.query(Subject).join(Subject.enrollments).filter(
+            Subject.id == subject_id,
+            Subject.enrollments.any(student_id=curr_user.id)
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="No tienes permiso para ver las evaluaciones de esta materia")
+
+    return db.query(Evaluation).filter(Evaluation.subject_id == subject_id).all()
 
 @router.get("/{evaluation_id}", response_model=EvaluationDto)
 def get_evaluation(

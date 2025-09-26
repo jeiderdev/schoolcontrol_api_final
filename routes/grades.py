@@ -23,7 +23,11 @@ def list_grades(
     if curr_user.role == UserRole.STUDENT:
         # Un estudiante solo puede ver sus notas
         return db.query(Grade).filter(Grade.student_id == curr_user.id).all()
-    # Admins y profesores ven todas
+    if curr_user.role == UserRole.TEACHER:
+        # Un profesor solo puede ver las notas de sus materias
+        return db.query(Grade).join(Grade.evaluation).join(Evaluation.subject).filter(
+            Subject.teacher_id == curr_user.id
+        ).all()
     return db.query(Grade).all()
 
 
@@ -61,6 +65,65 @@ def create_grade(
 
     return grade
 
+@router.get("/evaluation/{evaluation_id}", response_model=List[GradeDto])
+def list_grades_by_evaluation(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    curr_user: User = Depends(get_current_user)
+):
+    evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+
+    subject = db.query(Subject).filter(Subject.id == evaluation.subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Materia no encontrada")
+
+    # Permisos: solo admin, profesor dueño de la materia o estudiantes matriculados
+    if curr_user.role != UserRole.ADMIN and curr_user.id != subject.teacher_id:
+        if curr_user.role == UserRole.STUDENT:
+            enrollment = db.query(Subject).join(Subject.enrollments).filter(
+                Subject.id == subject.id,
+                Subject.enrollments.any(student_id=curr_user.id)
+            ).first()
+            if not enrollment:
+                raise HTTPException(status_code=403, detail="No tienes permiso para ver estas notas")
+            return db.query(Grade).filter(
+                Grade.evaluation_id == evaluation_id,
+                Grade.student_id == curr_user.id
+            ).all()
+        else:
+            raise HTTPException(status_code=403, detail="No tienes permiso para ver estas notas")
+
+    return db.query(Grade).filter(Grade.evaluation_id == evaluation_id).all()
+
+@router.get("/subject/{subject_id}", response_model=List[GradeDto])
+def list_grades_by_subject(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    curr_user: User = Depends(get_current_user)
+):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Materia no encontrada")
+
+    # Permisos: solo admin, profesor dueño de la materia o estudiantes matriculados
+    if curr_user.role != UserRole.ADMIN and curr_user.id != subject.teacher_id:
+        if curr_user.role == UserRole.STUDENT:
+            enrollment = db.query(Subject).join(Subject.enrollments).filter(
+                Subject.id == subject_id,
+                Subject.enrollments.any(student_id=curr_user.id)
+            ).first()
+            if not enrollment:
+                raise HTTPException(status_code=403, detail="No tienes permiso para ver estas notas")
+            return db.query(Grade).join(Grade.evaluation).filter(
+                Evaluation.subject_id == subject_id,
+                Grade.student_id == curr_user.id
+            ).all()
+        else:
+            raise HTTPException(status_code=403, detail="No tienes permiso para ver estas notas")
+
+    return db.query(Grade).join(Grade.evaluation).filter(Evaluation.subject_id == subject_id).all()
 
 @router.get("/{grade_id}", response_model=GradeDto)
 def get_grade(

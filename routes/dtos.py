@@ -68,6 +68,8 @@ class GradeBaseDto(BaseModel):
 class EvaluationBaseDto(BaseModel):
     id: int
     name: str
+    description: str | None
+    percentage: float
     subject_id: int
     created_at: datetime
     updated_at: datetime
@@ -131,6 +133,8 @@ class GradeDto(GradeBaseDto):
     
 class CreateEvaluationDto(BaseModel):
     name: str
+    description: Optional[str] = None
+    percentage: float = Field(..., ge=0.0, le=100.0)
     subject_id: int
 
 
