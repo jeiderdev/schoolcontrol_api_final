@@ -23,6 +23,7 @@ class User(Base):
     idnumber = Column(String(15), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False)
+    age = Column(Integer, nullable=True)
     photo = Column(Text, nullable=True)  # URL o path a la foto
     active = Column(Boolean, default=True)
     

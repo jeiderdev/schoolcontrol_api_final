@@ -10,7 +10,7 @@ class CreateUserDto(BaseModel):
     age: int
     role: UserRole
     password: str
-    photo: str = None
+    photo: str | None = None
     active: bool = True
 
 class UpdateUserDto(BaseModel):
@@ -27,8 +27,10 @@ class UserBaseDto(BaseModel):
     email: EmailStr
     age: int
     role: UserRole
-    photo: str = None
+    photo: str | None = None
     active: bool
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -78,6 +80,15 @@ class UserDto(UserBaseDto):
     subjects: list[SubjectBaseDto] = []
     enrollments: list[EnrollmentBaseDto] = []
     grades: list[GradeBaseDto] = []
+
+class TokenDto(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserDto  
+
+class LoginDto(BaseModel):
+    username: str
+    password: str
     
 class CreateSubjectDto(BaseModel):
     name: str

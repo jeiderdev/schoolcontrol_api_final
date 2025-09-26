@@ -76,6 +76,21 @@ def create_enrollment(
 
     return enrollment
 
+@router.get("/subject/{subject_id}", response_model=List[EnrollmentDto])
+def list_enrollments_of_subject(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    curr_user: User = Depends(get_current_user)
+):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Materia no encontrada")
+
+    # Permisos: admin o profesor dueño de la materia
+    if curr_user.role != UserRole.ADMIN and curr_user.id != subject.teacher_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver las matrículas de esta materia")
+
+    return db.query(Enrollment).filter(Enrollment.subject_id == subject_id).all()
 
 @router.put("/{enrollment_id}", response_model=EnrollmentDto)
 def update_enrollment(

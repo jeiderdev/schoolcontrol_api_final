@@ -13,6 +13,10 @@ router = APIRouter(prefix="/subjects", tags=["subjects"])
 
 @router.get("/", response_model=list[SubjectDto])
 def list_subjects(db: Session = Depends(get_db), curr_user: User = Depends(get_current_user)):
+    if curr_user.role == UserRole.TEACHER:
+        return db.query(Subject).filter(Subject.teacher_id == curr_user.id).all()
+    if curr_user.role == UserRole.STUDENT:
+        return db.query(Subject).join(Subject.enrollments).filter_by(student_id=curr_user.id).all()
     return db.query(Subject).all()
 
 
@@ -45,6 +49,15 @@ def get_subject(subject_id: int, db: Session = Depends(get_db), curr_user: User 
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Asignatura no encontrada")
+    if curr_user.role == UserRole.TEACHER and curr_user.id != subject.teacher_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta asignatura")
+    if curr_user.role == UserRole.STUDENT:
+        enrollment = db.query(Subject).join(Subject.enrollments).filter(
+            Subject.id == subject_id,
+            Subject.enrollments.any(student_id=curr_user.id)
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="No tienes permiso para ver esta asignatura")
     return subject
 
 
