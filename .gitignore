@@ -1,0 +1,42 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ---- Virtual env ----
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+
+# ---- Editor/IDE ----
+# .vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- Logs ----
+*.log
+logs/
+*.out
+
+# ---- Tests / Coverage ----
+.coverage
+htmlcov/
+.cache/
+.pytest_cache/
+.tox/
+.mypy_cache/
+.dmypy.json
+.pyre/
+
+# ---- FastAPI / Uvicorn ----
+# Archivos de ejecu
